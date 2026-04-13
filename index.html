@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Смета"/>
+  <title>smeta-mini-app</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --ff: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      /* Spacing */
+      --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.25rem;--s6:1.5rem;--s8:2rem;
+      /* Type */
+      --tx:clamp(.75rem,.7rem+.25vw,.875rem);
+      --ts:clamp(.875rem,.82rem+.3vw,1rem);
+      --tb:clamp(1rem,.95rem+.25vw,1.125rem);
+      --tl:clamp(1.1rem,1rem+.6vw,1.4rem);
+      --th:clamp(1.5rem,1.2rem+1vw,2rem);
+      /* Dark palette */
+      --bg:#111110;
+      --s-0:#161513;
+      --s-1:#1c1b18;
+      --s-2:#242220;
+      --s-3:#2d2b28;
+      --border:rgba(255,255,255,.08);
+      --divider:rgba(255,255,255,.05);
+      --t1:#f0ede5;
+      --t2:#9c9890;
+      --t3:#636058;
+      --acc:#5da8b4;
+      --acc-d:#3d7f8a;
+      --acc-glow:rgba(93,168,180,.22);
+      --green:#68aa43;
+      --yellow:#f5a623;
+      --red:#e06060;
+      --r-s:.5rem;--r-m:.875rem;--r-l:1.2rem;--r-xl:1.5rem;--r-f:9999px;
+      --ease:cubic-bezier(.25,1,.5,1);
+      --ease-out:cubic-bezier(.16,1,.3,1);
+      --shadow:0 16px 40px rgba(0,0,0,.38),0 2px 6px rgba(0,0,0,.22);
+      --shadow-s:0 2px 8px rgba(0,0,0,.22);
+    }
+    [data-theme="light"]{
+      --bg:#f5f3ef;--s-0:#faf9f7;--s-1:#fff;--s-2:#f8f7f4;--s-3:#eeece8;
+      --border:rgba(0,0,0,.07);--divider:rgba(0,0,0,.05);
+      --t1:#1a1814;--t2:#6e6b64;--t3:#a8a49d;
+      --acc:#0f7a86;--acc-d:#0a5f6a;--acc-glow:rgba(15,122,134,.15);
+      --shadow:0 12px 32px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.07);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html{font-size:16px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+    body{font-family:var(--ff);background:var(--bg);color:var(--t1);min-height:100dvh;overflow-x:hidden;}
+    button,input,select{font:inherit;color:inherit;border:none;background:none;}
+    button{cursor:pointer;}
+    input,select{outline:none;}
+    a{color:inherit;text-decoration:none;}
+
+    /* ─── SCREENS ─────────────────────────────────────────────── */
+    .screen{display:none;flex-direction:column;height:100dvh;overflow:hidden;}
+    .screen.active{display:flex;}
+
+    /* ─── HEADER ──────────────────────────────────────────────── */
+    .hdr{
+      padding:calc(env(safe-area-inset-top)+12px) var(--s4) var(--s3);
+      display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+      background:var(--s-0);
+      border-bottom:1px solid var(--divider);
+      flex-shrink:0;
+    }
+    .hdr-left{display:flex;flex-direction:column;}
+    .hdr-title{font-size:var(--tl);font-weight:800;letter-spacing:-.025em;}
+    .hdr-sub{font-size:var(--tx);color:var(--t2);margin-top:1px;}
+    .hdr-actions{display:flex;gap:var(--s2);}
+    .ico-btn{
+      width:38px;height:38px;border-radius:var(--r-f);
+      display:grid;place-items:center;
+      background:var(--s-2);border:1px solid var(--border);
+      color:var(--t1);font-size:16px;flex-shrink:0;
+    }
+    .ico-btn:active{opacity:.65;transform:scale(.93);}
+
+    /* ─── SCROLLABLE CONTENT ──────────────────────────────────── */
+    .scroller{flex:1;overflow-y:auto;overflow-x:hidden;padding:var(--s4) var(--s4) calc(env(safe-area-inset-bottom)+88px);}
+    .scroller::-webkit-scrollbar{display:none;}
+
+    /* ─── BOTTOM NAV ──────────────────────────────────────────── */
+    .bnav{
+      position:fixed;left:50%;transform:translateX(-50%);
+      bottom:calc(env(safe-area-inset-bottom)+10px);
+      width:calc(100% - 20px);max-width:440px;
+      display:flex;
+      background:rgba(22,21,19,.88);
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:22px;
+      backdrop-filter:blur(20px) saturate(1.4);
+      box-shadow:var(--shadow);
+      z-index:10;overflow:hidden;
+      padding:4px;
+    }
+    [data-theme="light"] .bnav{background:rgba(255,255,255,.85);}
+    .nb{
+      flex:1;min-height:58px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:3px;border-radius:17px;
+      color:var(--t2);font-size:10px;font-weight:700;letter-spacing:.01em;
+      transition:all .18s var(--ease);
+    }
+    .nb:active{transform:scale(.92);}
+    .nb.active{background:rgba(93,168,180,.16);color:var(--t1);}
+    [data-theme="light"] .nb.active{background:rgba(15,122,134,.1);color:var(--acc);}
+    .nb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+    /* ─── FAB ──────────────────────────────────────────────────── */
+    .fab{
+      position:fixed;right:18px;
+      bottom:calc(env(safe-area-inset-bottom)+76px);
+      width:56px;height:56px;border-radius:var(--r-f);
+      background:linear-gradient(140deg,var(--acc),var(--acc-d));
+      color:#071013;font-size:26px;font-weight:300;
+      box-shadow:0 8px 24px var(--acc-glow),0 2px 6px rgba(0,0,0,.2);
+      z-index:11;
+      transition:transform .14s var(--ease-out),box-shadow .14s;
+      display:grid;place-items:center;line-height:1;
+    }
+    .fab:active{transform:scale(.9);box-shadow:0 2px 10px var(--acc-glow);}
+
+    /* ─── HERO CARD ────────────────────────────────────────────── */
+    .hero{
+      background:linear-gradient(160deg,var(--acc-glow),transparent 60%),var(--s-1);
+      border:1px solid var(--border);
+      border-radius:var(--r-xl);
+      padding:var(--s5);
+      margin-bottom:var(--s4);
+      box-shadow:var(--shadow-s);
+    }
+    .hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);}
+    .hero-lbl{font-size:var(--tx);color:var(--t2);margin-bottom:5px;}
+    .hero-bal{font-size:var(--th);font-weight:800;letter-spacing:-.04em;line-height:1;}
+    .hero-note{font-size:var(--tx);color:var(--t2);margin-top:8px;}
+    .pill-badge{
+      padding:4px 10px;border-radius:var(--r-f);
+      font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    }
+    .pill-badge.pos{background:rgba(104,170,67,.18);color:var(--green);}
+    .pill-badge.neg{background:rgba(224,96,96,.18);color:var(--red);}
+    .mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2);margin-top:var(--s4);}
+    .mini{
+      padding:var(--s3);border-radius:var(--r-m);
+      background:rgba(255,255,255,.04);border:1px solid var(--divider);
+    }
+    [data-theme="light"] .mini{background:rgba(0,0,0,.02);}
+    .mini span{display:block;font-size:10px;color:var(--t2);margin-bottom:4px;font-weight:600;}
+    .mini b{font-size:var(--ts);font-weight:800;}
+
+    /* ─── SECTION HEADER ─────────────────────────────────────── */
+    .sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s3);}
+    .sec-hdr h2{font-size:var(--ts);font-weight:800;}
+    .sec-hdr span{font-size:var(--tx);color:var(--t2);}
+
+    /* ─── KPI ROW ─────────────────────────────────────────────── */
+    .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);margin-bottom:var(--s4);}
+    .kpi{
+      padding:var(--s4);border-radius:var(--r-l);
+      background:var(--s-1);border:1px solid var(--border);
+      box-shadow:var(--shadow-s);
+    }
+    .kpi-lbl{font-size:var(--tx);color:var(--t2);margin-bottom:6px;font-weight:600;}
+    .kpi-val{font-size:var(--tl);font-weight:800;letter-spacing:-.025em;}
+    .clr-acc{color:var(--acc);}
+    .clr-g{color:var(--green);}
+    .clr-r{color:var(--red);}
+    .clr-y{color:var(--yellow);}
+
+    /* ─── CHART CARD ──────────────────────────────────────────── */
+    .chart-card{
+      background:var(--s-1);border:1px solid var(--border);
+      border-radius:var(--r-xl);padding:var(--s4);
+      margin-bottom:var(--s4);box-shadow:var(--shadow-s);
+    }
+    .chart-tabs{display:flex;gap:var(--s2);overflow-x:auto;padding-bottom:2px;margin-bottom:var(--s4);}
+    .chart-tabs::-webkit-scrollbar{display:none;}
+    .ctab{
+      white-space:nowrap;min-height:34px;padding:0 var(--s3);
+      border-radius:var(--r-f);border:1px solid var(--border);
+      background:var(--s-2);color:var(--t2);
+      font-size:12px;font-weight:700;
+      transition:all .15s var(--ease);
+      flex-shrink:0;
+    }
+    .ctab.active{background:rgba(93,168,180,.18);color:var(--t1);border-color:rgba(93,168,180,.35);}
+    [data-theme="light"] .ctab.active{color:var(--acc);}
+
+    /* ─── ITEMS LIST ─────────────────────────────────────────── */
+    .items-list{display:flex;flex-direction:column;gap:var(--s2);}
+    .item-card{
+      background:var(--s-1);border:1px solid var(--border);
+      border-radius:var(--r-l);overflow:hidden;
+      box-shadow:var(--shadow-s);
+      position:relative;
+      transition:transform .18s var(--ease-out);
+    }
+    .item-inner{
+      padding:var(--s4);
+      transition:transform .22s var(--ease-out);
+      position:relative;z-index:2;
+      background:var(--s-1);
+    }
+    .item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);margin-bottom:10px;}
+    .item-name{font-size:var(--ts);font-weight:700;flex:1;}
+    .item-amount{font-size:var(--ts);font-weight:800;flex-shrink:0;}
+    .item-tags{display:flex;gap:var(--s2);flex-wrap:wrap;margin-bottom:10px;}
+    .tag{
+      min-height:24px;padding:0 9px;border-radius:var(--r-f);
+      font-size:11px;font-weight:700;
+      background:var(--s-2);color:var(--t2);
+      border:1px solid var(--border);
+      display:inline-flex;align-items:center;
+    }
+    .tag.income{background:rgba(104,170,67,.14);color:var(--green);border-color:rgba(104,170,67,.2);}
+    .tag.expense{background:rgba(224,96,96,.12);color:var(--red);border-color:rgba(224,96,96,.18);}
+    .tag.paid{background:rgba(104,170,67,.1);color:var(--green);border-color:rgba(104,170,67,.15);}
+    .tag.pending{background:rgba(245,166,35,.12);color:var(--yellow);border-color:rgba(245,166,35,.2);}
+    .tag.cancelled{background:rgba(224,96,96,.1);color:var(--red);border-color:rgba(224,96,96,.15);}
+    .item-bar{height:5px;border-radius:var(--r-f);background:var(--s-3);margin-bottom:8px;overflow:hidden;}
+    .item-bar-fill{height:100%;border-radius:var(--r-f);background:linear-gradient(90deg,var(--acc),var(--yellow));transition:width .4s var(--ease-out);}
+    .item-footer{display:flex;justify-content:space-between;font-size:11px;color:var(--t2);font-weight:600;}
+
+    /* swipe-to-delete backdrop */
+    .item-delete-bg{
+      position:absolute;right:0;top:0;bottom:0;width:80px;
+      background:var(--red);display:flex;align-items:center;justify-content:center;
+      font-size:22px;z-index:1;border-radius:0 var(--r-l) var(--r-l) 0;
+    }
+
+    /* ─── PROJECTS SCREEN ─────────────────────────────────────── */
+    .proj-list{display:flex;flex-direction:column;gap:var(--s2);}
+    .proj-card{
+      background:var(--s-1);border:1px solid var(--border);
+      border-radius:var(--r-l);padding:var(--s4);
+      display:flex;align-items:center;gap:var(--s3);
+      box-shadow:var(--shadow-s);cursor:pointer;
+      transition:background .12s var(--ease);
+      position:relative;overflow:hidden;
+    }
+    .proj-card:active{opacity:.75;}
+    .proj-card.active-proj{border-color:rgba(93,168,180,.45);background:rgba(93,168,180,.07);}
+    .proj-icon{
+      width:42px;height:42px;border-radius:14px;flex-shrink:0;
+      display:grid;place-items:center;font-size:20px;
+    }
+    .proj-info{flex:1;min-width:0;}
+    .proj-name{font-size:var(--ts);font-weight:700;}
+    .proj-meta{font-size:11px;color:var(--t2);margin-top:2px;}
+    .proj-badge{
+      min-width:28px;height:22px;padding:0 8px;border-radius:var(--r-f);
+      font-size:11px;font-weight:800;background:var(--s-3);color:var(--t2);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .add-proj-btn{
+      width:100%;min-height:52px;
+      border:1.5px dashed var(--border);border-radius:var(--r-l);
+      background:transparent;color:var(--t2);
+      font-size:var(--ts);font-weight:700;
+      display:flex;align-items:center;justify-content:center;gap:var(--s2);
+      margin-top:var(--s2);
+      transition:border-color .15s,color .15s;
+    }
+    .add-proj-btn:active{opacity:.6;}
+
+    /* ─── ANALYSIS ─────────────────────────────────────────────── */
+    .insight-list{display:flex;flex-direction:column;gap:var(--s3);}
+    .insight-card{
+      background:var(--s-1);border:1px solid var(--border);
+      border-radius:var(--r-l);padding:var(--s4);
+      display:flex;gap:var(--s3);align-items:flex-start;
+      box-shadow:var(--shadow-s);
+    }
+    .ins-ico{
+      width:36px;height:36px;border-radius:12px;flex-shrink:0;
+      background:var(--s-2);display:grid;place-items:center;font-size:18px;
+    }
+    .ins-text{font-size:var(--ts);line-height:1.5;flex:1;}
+
+    /* ─── BOTTOM SHEET ────────────────────────────────────────── */
+    .backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,.5);
+      opacity:0;pointer-events:none;z-index:30;
+      transition:opacity .22s var(--ease);
+    }
+    .backdrop.show{opacity:1;pointer-events:all;}
+    .sheet{
+      position:fixed;left:50%;right:auto;bottom:0;
+      width:100%;max-width:460px;
+      transform:translate(-50%,110%);
+      background:var(--s-0);
+      border:1px solid var(--border);
+      border-bottom:none;
+      border-radius:22px 22px 0 0;
+      padding:0 var(--s4) calc(env(safe-area-inset-bottom)+var(--s4));
+      z-index:40;
+      transition:transform .28s var(--ease-out);
+      max-height:90dvh;overflow-y:auto;
+    }
+    .sheet::-webkit-scrollbar{display:none;}
+    .sheet.show{transform:translate(-50%,0);}
+    .sheet-handle{width:44px;height:5px;border-radius:var(--r-f);background:var(--s-3);margin:12px auto var(--s4);}
+    .sheet-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s5);}
+    .sheet-title{font-size:var(--tl);font-weight:800;letter-spacing:-.02em;}
+    .form-body{display:flex;flex-direction:column;gap:var(--s4);}
+    .field{display:flex;flex-direction:column;gap:6px;}
+    .field label{font-size:12px;color:var(--t2);font-weight:700;letter-spacing:.02em;text-transform:uppercase;}
+    .field input,.field select{
+      min-height:50px;padding:0 var(--s4);
+      border-radius:14px;border:1.5px solid var(--border);
+      background:var(--s-1);font-size:var(--tb);font-weight:500;
+      -webkit-appearance:none;
+      transition:border-color .15s;
+    }
+    .field input:focus,.field select:focus{border-color:var(--acc);}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);}
+    .save-btn{
+      width:100%;min-height:54px;margin-top:var(--s2);
+      border-radius:16px;
+      background:linear-gradient(135deg,var(--acc),var(--acc-d));
+      color:#071013;font-size:var(--ts);font-weight:800;
+      box-shadow:0 6px 20px var(--acc-glow);
+      transition:transform .12s var(--ease-out),box-shadow .12s;
+    }
+    .save-btn:active{transform:scale(.97);}
+
+    /* ─── TOAST ─────────────────────────────────────────────────── */
+    .toast{
+      position:fixed;bottom:calc(env(safe-area-inset-bottom)+84px);
+      left:50%;transform:translateX(-50%) translateY(20px);
+      background:var(--t1);color:var(--bg);
+      padding:10px 18px;border-radius:var(--r-f);
+      font-size:var(--ts);font-weight:700;
+      box-shadow:var(--shadow);z-index:99;
+      opacity:0;pointer-events:none;
+      transition:opacity .2s var(--ease-out),transform .2s var(--ease-out);
+      white-space:nowrap;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* ─── CALENDAR ──────────────────────────────────────────────── */
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:var(--s4);}
+    .cal-head{font-size:10px;font-weight:800;color:var(--t2);text-align:center;padding:4px 0;}
+    .cal-day{
+      min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      border-radius:10px;font-size:12px;font-weight:700;position:relative;
+    }
+    .cal-day.today{background:rgba(93,168,180,.2);color:var(--acc);}
+    .cal-day.has-event::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--yellow);position:absolute;bottom:3px;}
+    .cal-day.other-month{opacity:.3;}
+
+    /* ─── STATES ────────────────────────────────────────────────── */
+    .empty-state{
+      display:flex;flex-direction:column;align-items:center;gap:var(--s3);
+      padding:var(--s8) var(--s4);color:var(--t2);text-align:center;
+    }
+    .empty-icon{font-size:48px;opacity:.6;}
+    .empty-title{font-size:var(--ts);font-weight:700;color:var(--t1);}
+    .empty-desc{font-size:var(--tx);max-width:28ch;line-height:1.5;}
+
+    /* ─── ANIMATIONS ─────────────────────────────────────────────── */
+    @keyframes fadeSlideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+    .animate-in{animation:fadeSlideUp .22s var(--ease-out) both;}
+
+    @media(min-width:600px){
+      .sheet,.bnav{max-width:520px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SCREENS ── -->
+
+<!-- HOME -->
+<div class="screen active" id="sc-home">
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-title" id="projTitleHome">📋 Смета</div>
+      <div class="hdr-sub" id="projSubHome">Выбери проект ниже</div>
+    </div>
+    <div class="hdr-actions">
+      <button class="ico-btn" id="themeBtn" aria-label="Тема">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="ico-btn" id="csvBtn" aria-label="Экспорт">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="scroller" id="homeScroll">
+    <div class="hero animate-in" id="heroCard">
+      <div class="hero-row">
+        <div>
+          <div class="hero-lbl">Баланс проекта</div>
+          <div class="hero-bal" id="balVal">0 ₽</div>
+          <div class="hero-note" id="balNote">Создай или выбери проект</div>
+        </div>
+        <span class="pill-badge pos" id="balBadge">±0</span>
+      </div>
+      <div class="mini-grid">
+        <div class="mini"><span>Доходы</span><b class="clr-g" id="m-inc">0 ₽</b></div>
+        <div class="mini"><span>Расходы</span><b class="clr-r" id="m-exp">0 ₽</b></div>
+        <div class="mini"><span>Оплачено</span><b class="clr-acc" id="m-paid">0 ₽</b></div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-lbl">Бюджет</div><div class="kpi-val clr-acc" id="kpi-budget">0 ₽</div></div>
+      <div class="kpi"><div class="kpi-lbl">В ожидании</div><div class="kpi-val clr-y" id="kpi-pend">0 ₽</div></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="sec-hdr" style="margin-bottom:var(--s3)">
+        <h2 id="chartLabel">Категории</h2>
+        <span id="chartSub">расходы</span>
+      </div>
+      <div class="chart-tabs">
+        <button class="ctab active" data-c="donut">Категории</button>
+        <button class="ctab" data-c="bar">Бюджет/факт</button>
+        <button class="ctab" data-c="status">Статусы</button>
+        <button class="ctab" data-c="line">Баланс</button>
+      </div>
+      <canvas id="mainChart" height="200"></canvas>
+    </div>
+
+    <div class="sec-hdr"><h2>Записи</h2><span id="itemsTotal">0</span></div>
+    <div class="items-list" id="itemsList"></div>
+  </div>
+</div>
+
+<!-- PROJECTS -->
+<div class="screen" id="sc-projects">
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-title">Проекты</div>
+      <div class="hdr-sub" id="projCount">0 проектов</div>
+    </div>
+    <div class="hdr-actions">
+      <button class="ico-btn" id="demoBtn2" aria-label="Демо">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="scroller">
+    <div class="proj-list" id="projList"></div>
+    <button class="add-proj-btn" id="addProjBtn">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Новый проект
+    </button>
+  </div>
+</div>
+
+<!-- ANALYSIS -->
+<div class="screen" id="sc-analysis">
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-title">Анализ</div>
+      <div class="hdr-sub">Авто-выводы по проекту</div>
+    </div>
+  </div>
+  <div class="scroller">
+    <div class="insight-list" id="insightList"></div>
+  </div>
+</div>
+
+<!-- CALENDAR -->
+<div class="screen" id="sc-calendar">
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-title">Календарь</div>
+      <div class="hdr-sub" id="calMonth">Апрель 2026</div>
+    </div>
+    <div class="hdr-actions">
+      <button class="ico-btn" id="calPrev">‹</button>
+      <button class="ico-btn" id="calNext">›</button>
+    </div>
+  </div>
+  <div class="scroller">
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="sec-hdr"><h2>Записи месяца</h2><span id="calItemCount">0</span></div>
+    <div class="items-list" id="calItemsList"></div>
+  </div>
+</div>
+
+<!-- FAB & BOTTOM NAV -->
+<button class="fab" id="fab">＋</button>
+
+<nav class="bnav">
+  <button class="nb active" data-sc="home">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Главная
+  </button>
+  <button class="nb" data-sc="projects">
+    <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    Проекты
+  </button>
+  <button class="nb" data-sc="analysis">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Анализ
+  </button>
+  <button class="nb" data-sc="calendar">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Календарь
+  </button>
+</nav>
+
+<!-- SHEET: ADD ITEM -->
+<div class="backdrop" id="bd-item"></div>
+<div class="sheet" id="sh-item">
+  <div class="sheet-handle"></div>
+  <div class="sheet-hdr">
+    <div class="sheet-title">Новая запись</div>
+    <button class="ico-btn" id="shItemClose">✕</button>
+  </div>
+  <div class="form-body">
+    <div class="field"><label>Наименование</label><input id="f-name" type="text" placeholder="Например, кирпич М150"/></div>
+    <div class="grid2">
+      <div class="field"><label>Тип</label>
+        <select id="f-type"><option value="expense">↓ Расход</option><option value="income">↑ Доход</option></select>
+      </div>
+      <div class="field"><label>Статус</label>
+        <select id="f-status"><option value="pending">В ожидании</option><option value="paid">Оплачено</option><option value="cancelled">Отменено</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Категория</label><input id="f-cat" type="text" placeholder="Материалы / Работы / Доходы"/></div>
+    <div class="grid2">
+      <div class="field"><label>Бюджет ₽</label><input id="f-budget" type="number" placeholder="0" inputmode="numeric"/></div>
+      <div class="field"><label>Факт ₽</label><input id="f-actual" type="number" placeholder="0" inputmode="numeric"/></div>
+    </div>
+    <div class="field"><label>Дата</label><input id="f-date" type="date"/></div>
+    <div class="field"><label>Заметка</label><input id="f-note" type="text" placeholder="Необязательно"/></div>
+    <button class="save-btn" id="saveItemBtn">Сохранить запись</button>
+  </div>
+</div>
+
+<!-- SHEET: ADD PROJECT -->
+<div class="backdrop" id="bd-proj"></div>
+<div class="sheet" id="sh-proj">
+  <div class="sheet-handle"></div>
+  <div class="sheet-hdr">
+    <div class="sheet-title">Новый проект</div>
+    <button class="ico-btn" id="shProjClose">✕</button>
+  </div>
+  <div class="form-body">
+    <div class="field"><label>Название</label><input id="p-name" type="text" placeholder="Ремонт квартиры"/></div>
+    <div class="field"><label>Иконка</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="emojiPicker">
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="🏗">🏗</span>
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="🏠">🏠</span>
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="🚀">🚀</span>
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="💼">💼</span>
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="🌿">🌿</span>
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="💡">💡</span>
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="🎯">🎯</span>
+        <span style="cursor:pointer;font-size:24px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--s-2)" data-e="⚡">⚡</span>
+      </div>
+    </div>
+    <button class="save-btn" id="saveProjBtn">Создать проект</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════ STATE ═══════════════════════════════ */
+const KEY = 'smeta_v2';
+let db = load();
+let currentProjId = db.currentProjId || null;
+let chart = null;
+let chartMode = 'donut';
+let selectedEmoji = '🏗';
+let calDate = new Date();
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || { projects: [], currentProjId: null }; }
+  catch(e) { return { projects: [], currentProjId: null }; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch(e) {}
+}
+
+/* ═══════════════════════════════ HELPERS ════════════════════════════ */
+const $ = id => document.getElementById(id);
+const fmt = n => new Intl.NumberFormat('ru-RU').format(Math.round(n||0)) + ' ₽';
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const COLORS = ['#5da8b4','#68aa43','#f5a623','#e06060','#a86fdf','#5591c7','#e8af34','#f06292'];
+
+function currentProj() {
+  return db.projects.find(p => p.id === currentProjId) || null;
+}
+
+function showToast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ═══════════════════════════════ SCREENS ════════════════════════════ */
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('sc-' + name).classList.add('active');
+  document.querySelectorAll('.nb[data-sc]').forEach(b => b.classList.toggle('active', b.dataset.sc === name));
+  if (name === 'home') renderHome();
+  if (name === 'analysis') renderAnalysis();
+  if (name === 'projects') renderProjects();
+  if (name === 'calendar') renderCalendar();
+  document.getElementById('fab').style.display = (name === 'home') ? 'grid' : 'none';
+}
+
+/* ═══════════════════════════════ SHEETS ════════════════════════════ */
+function openSheet(bdId, shId) {
+  $(bdId).classList.add('show'); $(shId).classList.add('show');
+}
+function closeSheet(bdId, shId) {
+  $(bdId).classList.remove('show'); $(shId).classList.remove('show');
+}
+function openItemSheet() {
+  if (!currentProj()) { showToast('Сначала выбери проект'); switchScreen('projects'); return; }
+  const today = new Date().toISOString().split('T')[0];
+  $('f-date').value = today;
+  openSheet('bd-item','sh-item');
+  setTimeout(() => $('f-name').focus(), 200);
+}
+
+/* ═══════════════════════════════ PROJECTS ═══════════════════════════ */
+function renderProjects() {
+  $('projCount').textContent = db.projects.length + ' проектов';
+  const list = $('projList');
+  if (!db.projects.length) {
+    list.innerHTML = '<div class="empty-state animate-in"><div class="empty-icon">📁</div><div class="empty-title">Нет проектов</div><div class="empty-desc">Создай первый проект, чтобы начать вести смету</div></div>';
+    return;
+  }
+  list.innerHTML = db.projects.map(p => {
+    const items = p.items || [];
+    const total = items.reduce((s,i) => s + (i.type==='income'?i.actual:-i.actual), 0);
+    return `<div class="proj-card${p.id===currentProjId?' active-proj':''} animate-in" onclick="selectProject('${p.id}')">
+      <div class="proj-icon">${p.icon||'📋'}</div>
+      <div class="proj-info">
+        <div class="proj-name">${esc(p.name)}</div>
+        <div class="proj-meta">${items.length} записей · Баланс: ${fmt(total)}</div>
+      </div>
+      <span class="proj-badge${p.id===currentProjId?' clr-acc':''}">${p.id===currentProjId?'✓':items.length}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectProject(id) {
+  currentProjId = id; db.currentProjId = id; save();
+  renderProjects();
+  showToast('Проект выбран');
+  setTimeout(() => switchScreen('home'), 200);
+}
+
+function createProject() {
+  const name = $('p-name').value.trim();
+  if (!name) return;
+  const proj = { id: uid(), name, icon: selectedEmoji, items: [] };
+  db.projects.push(proj);
+  currentProjId = proj.id; db.currentProjId = proj.id;
+  save();
+  $('p-name').value = ''; selectedEmoji = '🏗';
+  closeSheet('bd-proj','sh-proj');
+  showToast('Проект создан');
+  switchScreen('home');
+}
+
+/* ═══════════════════════════════ ITEMS ══════════════════════════════ */
+function addItem() {
+  const name = $('f-name').value.trim();
+  if (!name) { showToast('Введи наименование'); return; }
+  const proj = currentProj();
+  if (!proj) return;
+  const item = {
+    id: uid(), name,
+    type: $('f-type').value,
+    status: $('f-status').value,
+    category: $('f-cat').value.trim() || ($('f-type').value === 'income' ? 'Доходы' : 'Прочее'),
+    budget: Number($('f-budget').value)||0,
+    actual: Number($('f-actual').value)||0,
+    date: $('f-date').value || new Date().toISOString().split('T')[0],
+    note: $('f-note').value.trim()
+  };
+  proj.items.unshift(item);
+  save();
+  ['f-name','f-cat','f-budget','f-actual','f-note'].forEach(id => $(id).value = '');
+  $('f-type').value = 'expense'; $('f-status').value = 'pending';
+  closeSheet('bd-item','sh-item');
+  showToast('Запись добавлена');
+  renderHome();
+}
+
+function deleteItem(projId, itemId) {
+  const proj = db.projects.find(p => p.id === projId);
+  if (!proj) return;
+  proj.items = proj.items.filter(i => i.id !== itemId);
+  save(); renderHome();
+  showToast('Удалено');
+}
+
+/* ═══════════════════════════════ RENDER HOME ════════════════════════ */
+function renderHome() {
+  const proj = currentProj();
+  if (!proj) {
+    $('projTitleHome').textContent = '📋 Смета';
+    $('projSubHome').textContent = 'Выбери проект →';
+    $('balVal').textContent = '—'; $('balNote').textContent = 'Проект не выбран';
+    $('m-inc').textContent = '—'; $('m-exp').textContent = '—'; $('m-paid').textContent = '—';
+    $('kpi-budget').textContent = '—'; $('kpi-pend').textContent = '—';
+    $('itemsList').innerHTML = '<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">Проект не выбран</div><div class="empty-desc">Перейди в «Проекты» и выбери или создай проект</div></div>';
+    updateChart([],[]);
+    return;
+  }
+  $('projTitleHome').textContent = (proj.icon||'📋') + ' ' + proj.name;
+  $('projSubHome').textContent = (proj.items||[]).length + ' записей';
+  const t = calcTotals(proj.items||[]);
+  $('balVal').textContent = fmt(Math.abs(t.balance));
+  $('balVal').className = 'hero-bal ' + (t.balance >= 0 ? 'clr-g' : 'clr-r');
+  $('balNote').textContent = t.balance >= 0 ? 'Доходы превышают расходы' : 'Расходы превышают доходы';
+  const badge = $('balBadge');
+  badge.textContent = t.balance >= 0 ? '↑ Плюс' : '↓ Минус';
+  badge.className = 'pill-badge ' + (t.balance >= 0 ? 'pos' : 'neg');
+  $('m-inc').textContent = fmt(t.incomeFact);
+  $('m-exp').textContent = fmt(t.expenseFact);
+  $('m-paid').textContent = fmt(t.paid);
+  $('kpi-budget').textContent = fmt(t.budget);
+  $('kpi-pend').textContent = fmt(t.pending);
+  $('itemsTotal').textContent = (proj.items||[]).length + ' записей';
+  renderItems(proj);
+  updateChart(proj.items||[], chartMode);
+}
+
+function calcTotals(items) {
+  const exp = items.filter(i=>i.type==='expense');
+  const inc = items.filter(i=>i.type==='income');
+  const budget = exp.reduce((s,i)=>s+i.budget,0);
+  const expenseFact = exp.reduce((s,i)=>s+i.actual,0);
+  const incomeFact = inc.reduce((s,i)=>s+i.actual,0);
+  const paid = items.filter(i=>i.status==='paid').reduce((s,i)=>s+i.actual,0);
+  const pending = items.filter(i=>i.status==='pending').reduce((s,i)=>s+i.actual,0);
+  return { budget, expenseFact, incomeFact, balance: incomeFact - expenseFact, paid, pending };
+}
+
+function renderItems(proj) {
+  const items = proj.items || [];
+  const list = $('itemsList');
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state animate-in"><div class="empty-icon">📝</div><div class="empty-title">Нет записей</div><div class="empty-desc">Нажми ＋ чтобы добавить первую запись в смету</div></div>';
+    return;
+  }
+  list.innerHTML = items.map(item => {
+    const pct = item.budget > 0 ? Math.min((item.actual/item.budget)*100, 100) : 0;
+    const ac = item.type==='income' ? 'clr-g' : 'clr-r';
+    const tl = item.type==='income' ? 'income' : 'expense';
+    const sl = { paid:'Оплачено', pending:'В ожидании', cancelled:'Отменено' }[item.status];
+    return `<div class="item-card animate-in" id="ic-${item.id}">
+      <div class="item-delete-bg">🗑</div>
+      <div class="item-inner" id="ii-${item.id}">
+        <div class="item-top">
+          <div class="item-name">${esc(item.name)}</div>
+          <div class="item-amount ${ac}">${fmt(item.actual)}</div>
+        </div>
+        <div class="item-tags">
+          <span class="tag ${tl}">${item.type==='income'?'↑ Доход':'↓ Расход'}</span>
+          <span class="tag ${item.status}">${sl}</span>
+          <span class="tag">${esc(item.category)}</span>
+        </div>
+        <div class="item-bar"><div class="item-bar-fill" style="width:${pct}%"></div></div>
+        <div class="item-footer">
+          <span>Бюджет: ${fmt(item.budget)}</span>
+          <span>${item.budget?Math.round((item.actual/item.budget)*100):0}%${item.date?' · '+item.date.slice(5):''}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Swipe to delete
+  items.forEach(item => {
+    const inner = document.getElementById('ii-' + item.id);
+    if (!inner) return;
+    let startX = 0, dx = 0, swiping = false;
+    inner.addEventListener('touchstart', e => { startX = e.touches[0].clientX; swiping = true; dx=0; }, { passive:true });
+    inner.addEventListener('touchmove', e => {
+      if (!swiping) return;
+      dx = e.touches[0].clientX - startX;
+      if (dx < 0) inner.style.transform = `translateX(${Math.max(dx,-80)}px)`;
+    }, { passive:true });
+    inner.addEventListener('touchend', () => {
+      swiping = false;
+      if (dx < -55) {
+        inner.style.transform = 'translateX(-80px)';
+        setTimeout(() => {
+          const proj = currentProj();
+          if (proj) deleteItem(proj.id, item.id);
+        }, 220);
+      } else {
+        inner.style.transform = 'translateX(0)';
+      }
+    });
+  });
+}
+
+/* ═══════════════════════════════ CHART ══════════════════════════════ */
+function updateChart(items, mode) {
+  if (!chart) {
+    chart = new Chart($('mainChart'), {
+      type: 'doughnut',
+      data: { labels:[], datasets:[{data:[],backgroundColor:COLORS}] },
+      options: {
+        responsive:true,
+        plugins:{legend:{labels:{color:'#9c9890',font:{size:11}}}},
+        scales:{
+          x:{ticks:{color:'#9c9890',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'},display:false},
+          y:{ticks:{color:'#9c9890',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'},display:false}
+        }
+      }
+    });
+  }
+
+  const expenses = (items||[]).filter(i=>i.type==='expense');
+  const byCategory = {};
+  expenses.forEach(i => byCategory[i.category] = (byCategory[i.category]||0) + i.actual);
+  const cats = [...new Set((items||[]).map(i=>i.category))];
+
+  if (mode==='donut') {
+    chart.config.type='doughnut';
+    chart.data.labels=Object.keys(byCategory);
+    chart.data.datasets=[{data:Object.values(byCategory),backgroundColor:COLORS,hoverOffset:6}];
+    chart.options.scales.x.display=false; chart.options.scales.y.display=false;
+    $('chartLabel').textContent='Категории'; $('chartSub').textContent='расходы';
+  } else if (mode==='bar') {
+    chart.config.type='bar';
+    chart.data.labels=cats;
+    chart.data.datasets=[
+      {label:'Бюджет',data:cats.map(c=>(items||[]).filter(i=>i.category===c).reduce((s,i)=>s+i.budget,0)),backgroundColor:'rgba(93,168,180,.7)',borderRadius:7},
+      {label:'Факт',data:cats.map(c=>(items||[]).filter(i=>i.category===c).reduce((s,i)=>s+i.actual,0)),backgroundColor:'rgba(245,166,35,.7)',borderRadius:7}
+    ];
+    chart.options.scales.x.display=true; chart.options.scales.y.display=true;
+    $('chartLabel').textContent='Бюджет/факт'; $('chartSub').textContent='по категориям';
+  } else if (mode==='status') {
+    const paid=(items||[]).filter(i=>i.status==='paid').reduce((s,i)=>s+i.actual,0);
+    const pend=(items||[]).filter(i=>i.status==='pending').reduce((s,i)=>s+i.actual,0);
+    const canc=(items||[]).filter(i=>i.status==='cancelled').reduce((s,i)=>s+i.actual,0);
+    chart.config.type='pie';
+    chart.data.labels=['Оплачено','В ожидании','Отменено'];
+    chart.data.datasets=[{data:[paid,pend,canc],backgroundColor:['#68aa43','#f5a623','#e06060'],hoverOffset:6}];
+    chart.options.scales.x.display=false; chart.options.scales.y.display=false;
+    $('chartLabel').textContent='Статусы'; $('chartSub').textContent='платежей';
+  } else if (mode==='line') {
+    let run=0; const lbl=[], dat=[];
+    ([...items||[]]).reverse().forEach(i=>{
+      run += i.type==='income'?i.actual:-i.actual;
+      lbl.push(i.name.length>10?i.name.slice(0,10)+'…':i.name);
+      dat.push(run);
+    });
+    const lc=run>=0?'#68aa43':'#e06060';
+    chart.config.type='line';
+    chart.data.labels=lbl;
+    chart.data.datasets=[{label:'Баланс',data:dat,borderColor:lc,backgroundColor:run>=0?'rgba(104,170,67,.1)':'rgba(224,96,96,.1)',fill:true,pointBackgroundColor:dat.map(v=>v>=0?'#68aa43':'#e06060'),pointRadius:4,tension:.4}];
+    chart.options.scales.x.display=true; chart.options.scales.y.display=true;
+    $('chartLabel').textContent='Накопительный баланс'; $('chartSub').textContent='по записям';
+  }
+  chart.update();
+}
+
+/* ═══════════════════════════════ ANALYSIS ═══════════════════════════ */
+function renderAnalysis() {
+  const proj = currentProj();
+  const list = $('insightList');
+  if (!proj || !proj.items.length) {
+    list.innerHTML = '<div class="empty-state animate-in"><div class="empty-icon">✨</div><div class="empty-title">Нет данных</div><div class="empty-desc">Добавь записи в проект, и здесь появятся автоматические выводы</div></div>';
+    return;
+  }
+  const t = calcTotals(proj.items);
+  const insights = [];
+  insights.push({ icon: t.balance>=0?'✅':'⚠️', text: t.balance>=0 ? `Баланс положительный — ${fmt(t.balance)}. Доходы покрывают расходы.` : `Дефицит ${fmt(Math.abs(t.balance))}. Расходы превышают доходы.` });
+  if (t.budget>0) {
+    const d=t.expenseFact-t.budget; const p=Math.abs((d/t.budget)*100).toFixed(1);
+    insights.push({ icon: d>0?'🔴':'🟢', text: d>0 ? `Превышение бюджета на ${p}% (+${fmt(d)}).` : `Экономия ${p}% от бюджета (−${fmt(Math.abs(d))}).` });
+  }
+  const byCat={};
+  proj.items.filter(i=>i.type==='expense').forEach(i=>byCat[i.category]=(byCat[i.category]||0)+i.actual);
+  const top=Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  if (top) insights.push({ icon:'📦', text:`Топ категория расходов: «${top[0]}» — ${fmt(top[1])}${t.expenseFact>0?' ('+((top[1]/t.expenseFact)*100).toFixed(0)+'%)':''}.` });
+  const over=proj.items.filter(i=>i.type==='expense'&&i.budget>0&&i.actual>i.budget);
+  if (over.length) insights.push({ icon:'🚨', text:`${over.length} позиц(ий) превысили бюджет: ${over.slice(0,3).map(i=>i.name).join(', ')}.` });
+  insights.push({ icon:'💳', text:`Оплачено ${fmt(t.paid)} из ${fmt(t.expenseFact)} расходов (${t.expenseFact>0?Math.round(t.paid/t.expenseFact*100):0}%).` });
+  if (t.pending>0) insights.push({ icon:'🕐', text:`В ожидании оплаты: ${fmt(t.pending)}.` });
+  const allPct = t.budget>0 ? Math.round(t.expenseFact/t.budget*100) : 0;
+  insights.push({ icon: allPct>80?'⚡':'🎯', text:`Бюджет использован на ${allPct}%.` });
+
+  list.innerHTML = insights.map(i=>`<div class="insight-card animate-in"><div class="ins-ico">${i.icon}</div><div class="ins-text">${esc(i.text)}</div></div>`).join('');
+}
+
+/* ═══════════════════════════════ CALENDAR ═══════════════════════════ */
+function renderCalendar() {
+  const y=calDate.getFullYear(), m=calDate.getMonth();
+  const months=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  $('calMonth').textContent = months[m] + ' ' + y;
+
+  const proj = currentProj();
+  const items = proj ? (proj.items||[]) : [];
+  const eventDates = new Set(items.map(i=>i.date).filter(Boolean));
+
+  const first = new Date(y, m, 1);
+  let startDay = first.getDay(); if (startDay===0) startDay=7;
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const today = new Date();
+
+  const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  let html = days.map(d=>`<div class="cal-head">${d}</div>`).join('');
+  for(let i=1;i<startDay;i++) html+=`<div class="cal-day other-month">${new Date(y,m,1-startDay+i).getDate()}</div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=y+'-'+(String(m+1).padStart(2,'0'))+'-'+(String(d).padStart(2,'0'));
+    const isToday=d===today.getDate()&&m===today.getMonth()&&y===today.getFullYear();
+    const hasEv=eventDates.has(ds);
+    html+=`<div class="cal-day${isToday?' today':''}${hasEv?' has-event':''}">${d}</div>`;
+  }
+  $('calGrid').innerHTML=html;
+
+  const monthItems=items.filter(i=>i.date&&i.date.startsWith(y+'-'+String(m+1).padStart(2,'0')));
+  $('calItemCount').textContent=monthItems.length+' записей';
+  if (!monthItems.length) {
+    $('calItemsList').innerHTML='<div class="empty-state animate-in"><div class="empty-icon">📅</div><div class="empty-title">Нет записей</div><div class="empty-desc">В этом месяце ещё нет записей с датой</div></div>';
+    return;
+  }
+  $('calItemsList').innerHTML=monthItems.map(item=>{
+    const ac=item.type==='income'?'clr-g':'clr-r';
+    return `<div class="item-card animate-in"><div class="item-inner">
+      <div class="item-top"><div class="item-name">${esc(item.name)}</div><div class="item-amount ${ac}">${fmt(item.actual)}</div></div>
+      <div class="item-tags"><span class="tag ${item.status}">${{paid:'Оплачено',pending:'В ожидании',cancelled:'Отменено'}[item.status]}</span><span class="tag">${esc(item.category)}</span><span class="tag">${item.date}</span></div>
+    </div></div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════ CSV ════════════════════════════════ */
+function exportCSV() {
+  const proj = currentProj();
+  if (!proj) { showToast('Выбери проект'); return; }
+  const hdr = ['Наименование','Категория','Тип','Бюджет','Факт','Статус','Дата','Заметка'];
+  const rows = proj.items.map(i=>[i.name,i.category,i.type==='income'?'Доход':'Расход',i.budget,i.actual,{paid:'Оплачено',pending:'В ожидании',cancelled:'Отменено'}[i.status],i.date||'',i.note||'']);
+  const csv=[hdr,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=proj.name+'_smeta.csv';a.click();
+  showToast('CSV сохранён');
+}
+
+/* ═══════════════════════════════ DEMO ════════════════════════════════ */
+function fillDemo() {
+  const demo = {
+    id: uid(), name: 'Ремонт квартиры', icon: '🏗',
+    items: [
+      {id:uid(),name:'Аванс от заказчика',type:'income',status:'paid',category:'Доходы',budget:300000,actual:300000,date:'2026-04-01',note:''},
+      {id:uid(),name:'Стройматериалы',type:'expense',status:'paid',category:'Материалы',budget:80000,actual:88000,date:'2026-04-03',note:''},
+      {id:uid(),name:'Бригада отделочников',type:'expense',status:'pending',category:'Работы',budget:70000,actual:70000,date:'2026-04-07',note:'Ждёт оплаты'},
+      {id:uid(),name:'Электрика',type:'expense',status:'paid',category:'Работы',budget:30000,actual:28500,date:'2026-04-10',note:''},
+      {id:uid(),name:'Логистика',type:'expense',status:'paid',category:'Транспорт',budget:15000,actual:12000,date:'2026-04-12',note:''},
+      {id:uid(),name:'Налоги/пошлины',type:'expense',status:'pending',category:'Налоги',budget:20000,actual:21000,date:'2026-04-14',note:''},
+    ]
+  };
+  db.projects.push(demo);
+  currentProjId = demo.id; db.currentProjId = demo.id;
+  save(); closeSheet('bd-proj','sh-proj');
+  showToast('Демо-проект добавлен');
+  switchScreen('home');
+}
+
+/* ═══════════════════════════════ THEME ══════════════════════════════ */
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  $('themeBtn').innerHTML = isDark
+    ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`
+    : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`;
+  if (chart) chart.update();
+}
+
+/* ═══════════════════════════════ EVENTS ════════════════════════════ */
+document.querySelectorAll('.nb[data-sc]').forEach(b => b.addEventListener('click', () => switchScreen(b.dataset.sc)));
+$('fab').addEventListener('click', openItemSheet);
+$('shItemClose').addEventListener('click', () => closeSheet('bd-item','sh-item'));
+$('bd-item').addEventListener('click', () => closeSheet('bd-item','sh-item'));
+$('saveItemBtn').addEventListener('click', addItem);
+$('addProjBtn').addEventListener('click', () => openSheet('bd-proj','sh-proj'));
+$('shProjClose').addEventListener('click', () => closeSheet('bd-proj','sh-proj'));
+$('bd-proj').addEventListener('click', () => closeSheet('bd-proj','sh-proj'));
+$('saveProjBtn').addEventListener('click', createProject);
+$('demoBtn2').addEventListener('click', fillDemo);
+$('csvBtn').addEventListener('click', exportCSV);
+$('themeBtn').addEventListener('click', toggleTheme);
+
+document.querySelectorAll('.ctab').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.ctab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  chartMode = b.dataset.c;
+  const proj = currentProj();
+  updateChart(proj ? (proj.items||[]) : [], chartMode);
+}));
+
+$('calPrev').addEventListener('click', () => { calDate.setMonth(calDate.getMonth()-1); renderCalendar(); });
+$('calNext').addEventListener('click', () => { calDate.setMonth(calDate.getMonth()+1); renderCalendar(); });
+
+document.querySelectorAll('#emojiPicker span').forEach(s => s.addEventListener('click', () => {
+  selectedEmoji = s.dataset.e;
+  document.querySelectorAll('#emojiPicker span').forEach(x => x.style.borderColor = 'var(--border)');
+  s.style.borderColor = 'var(--acc)';
+}));
+
+['f-name','f-cat','f-budget','f-actual','f-note'].forEach(id => {
+  const el = $(id); if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') addItem(); });
+});
+$('p-name').addEventListener('keydown', e => { if(e.key==='Enter') createProject(); });
+
+/* ═══════════════════════════════ INIT ════════════════════════════════ */
+renderHome();
+</script>
+</body>
+</html>
