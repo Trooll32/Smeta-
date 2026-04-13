@@ -1,63 +1,29 @@
-# Smeta Mini App — GitHub Pages
+# app_2 — GitHub Pages сборка
 
-Это статическое мини-приложение для ведения сметы, адаптированное под iPhone и публикацию через GitHub Pages.
+## Что это
+Статическое мини-приложение для сметы, адаптированное под iPhone Safari и GitHub Pages.
 
-## Что внутри
+## Файлы
+- `index.html` — приложение
+- `.nojekyll` — отключение Jekyll на GitHub Pages
 
-- `index.html` — само приложение
-- `.nojekyll` — отключает Jekyll на GitHub Pages
+## Как опубликовать
+1. Создай репозиторий `app_2`
+2. Загрузи в корень репозитория содержимое этой папки
+3. Открой GitHub → Settings → Pages
+4. Выбери `Deploy from a branch`
+5. Branch: `main`, Folder: `/ (root)`
+6. Сохрани
 
-## Как загрузить в GitHub
+Адрес будет такого вида:
+`https://USERNAME.github.io/app_2/`
 
-### Вариант 1 — через сайт GitHub
-1. Создай новый репозиторий, например `smeta-app`
-2. Нажми **Add file** → **Upload files**
-3. Загрузи `index.html`, `README.md` и `.nojekyll`
-4. Нажми **Commit changes**
+## Как пользоваться
+- При первом запуске нажми `Создать проект`
+- Или нажми `Загрузить демо`
+- После создания проекта можно добавлять записи через кнопку `＋`
+- Данные сохраняются локально в Safari через localStorage
 
-### Вариант 2 — через git локально
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/USERNAME/smeta-app.git
-git push -u origin main
-```
 
-## Как включить GitHub Pages
-1. Зайди в репозиторий на GitHub
-2. Открой **Settings** → **Pages**
-3. В блоке **Build and deployment** выбери:
-   - **Source** → `Deploy from a branch`
-   - **Branch** → `main`
-   - **Folder** → `/ (root)`
-4. Нажми **Save**
-5. Подожди 1–3 минуты
-
-После этого приложение будет доступно по адресу:
-
-```text
-https://USERNAME.github.io/smeta-app/
-```
-
-## Как открыть на iPhone
-1. Открой ссылку GitHub Pages в Safari
-2. Нажми **Поделиться**
-3. Выбери **На экран «Домой»**
-
-## Важно
-- Все данные сохраняются в `localStorage` браузера
-- Данные привязаны к конкретному Safari и конкретному устройству
-- Если открыть приложение на другом iPhone, база будет пустой
-- Если очистить данные Safari, записи удалятся
-
-## Что уже работает
-- Проекты
-- Добавление записей
-- Графики
-- Аналитика
-- Календарь
-- Экспорт CSV
-- Свайп-удаление
-- Тёмная и светлая тема
+## Новое
+- Добавлено редактирование позиций через кнопку `Ред.` в каждой записи.
